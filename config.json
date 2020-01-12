@@ -1,0 +1,37 @@
+{
+
+    "announce": 1,
+    "port": 7776,
+    "hostname": "Darkside Roleplay(2XP)",
+    "password": "",
+    "maxplayers": 100,
+    "gamemode": "WCRP",
+    "language": "English",
+    
+    "rules":{
+        "weburl":"http://example.com",
+        "version":"0.3.7-R2",
+        "weather":"10",
+        "worldtime":"19:45"
+    },
+
+    "rcon_password": "changeme",
+    "query": 1,
+    "chatlogging": 1,
+    "onfoot_rate": 40,
+    "incar_rate": 40,
+    "weapon_rate": 40,
+    "stream_distance": 300.0,
+    "stream_rate": 1000,
+    "lagcomp": 0,
+    "maxnpc": 0,
+    "logtimeformat": "[%H:%M:%S]",
+    "test":{
+        "OnlinePlayers":[
+            { "id":1, "name":"Mike_Zodiac", "score": 18, "ping": 28 },
+            { "id":3, "name":"Zilo_Alamb", "score": 5, "ping": 50 },
+            { "id":7, "name":"Rodero_Del_Fatines", "score": 30, "ping": 43 },
+            { "id":2, "name":"Carls_Jhonson", "score": 27, "ping": 134 }
+        ]
+    }
+}
