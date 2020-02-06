@@ -1,12 +1,9 @@
 import logging
 import socket
-import Packet
+import Packet 
 import sys
 import json
-import random
-import SampNetEncr
-import binascii
-from Reliability import *
+
 
 config_file = open('config.json')
 Config      = json.load(config_file)
@@ -25,35 +22,9 @@ def UInt16ToByteArray(value):
     ar.append(value & 0xFF)
     ar.append((value>>8) & 0xFF)
     return ar
-def LOG_MSG(header, addr, data):
-    log.debug("%s\t@%s\t%s" % (header, addr, binascii.hexlify(data)))
-    
+
 class Server:
     
-    @staticmethod
-    def RCONPacket(recp):
-        
-        pwdlen = int(recp[12] + (recp[13] << 8))
-        idx = 14
-        pwd = str(recp[idx:idx + pwdlen])
-        idx += pwdlen
-
-        if(pwd == Config['rcon_password']):
-            cmdlen = int(recp[idx] + (recp[idx+1] << 8))
-            idx += 2
-            cmd = str(recp[idx:(idx + cmdlen)])
-            idx += cmdlen
-
-        packet = bytearray()
-        packet.extend(recp[:12])
-        rules = Config['rules'].items()
-        packet.extend(UInt16ToByteArray(len(rules)))
-        for rule in rules:
-            packet.append(len(rule[0]))
-            packet.extend(bytearray(rule[0].encode()))
-            packet.append(len(rule[1]))
-            packet.extend(bytearray(rule[1].encode()))
-        return bytes(packet)
 
     @staticmethod
     def GetServerRulesPacket(recp):
@@ -122,7 +93,6 @@ class SampQuery:
         'd': Get detailed player info
         'r': Get Server rules
         'p': Ping
-        'x': RCON
         'p0101': Attempt connection to server
     '''
     def __init__(self, msg):
@@ -141,57 +111,32 @@ logging.basicConfig(level=logging.DEBUG, format=FORMAT_CONS)
 
 host='127.0.0.1'
 port=1234
-server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-log.info("Listening on udp %s:%s" % (host, Config['port']))
-server.bind((host, Config['port']))
+log.info("Listening on udp %s:%s" % (host, port))
+s.bind((host, port))
 while True:
-    (data, addr) = server.recvfrom(128*1024)
-    response = bytearray()
-    if(data[0] == ord('S')):
-        LOG_MSG(" INCOME", addr, data)
-        query = SampQuery(data)
-        if(query.type == 'i'):
-            response = Server.GetServerInfoPacket(data)
-        elif(query.type == 'r'):
-            response = Server.GetServerRulesPacket(data)
-        elif(query.type == 'c'):
-            response = Server.GetBasicPlayersPacket(data)
-        elif(query.type == 'd'):    
-            response = Server.GetDetailedPlayersPacket(data)
-        elif(query.type == 'p'):
-            response = data
-        elif(query.type == 'x'):
-            print("  >>> RCON CMD: ", str(data[12:]))
-    else:
-        if(data[0] == Packet.ID_PING_OPEN_CONNECTIONS):
-            LOG_MSG(" INCOME", addr, data)
-            response = bytearray([Packet.ID_OPEN_CONNECTION_COOKIE, 0x08, 0xD2])
-            #response=bytearray([Packet.ID_OPEN_CONNECTION_COOKIE, random.randint(0,255), random.randint(0,255)])
-        else:
-            decrypted_data = SampNetEncr.unKyretardizeDatagram(bytearray(data), len(data), Config['port'], 0)
-            if(decrypted_data==False):
-                continue
-            LOG_MSG("+INCOME", addr, decrypted_data)
-            if(decrypted_data[0] == Packet.ID_OPEN_CONNECTION_REQUEST):
-                response = bytearray([Packet.ID_OPEN_CONNECTION_REPLY, 0x00])
-                #response = bytearray([Packet.ID_NO_FREE_INCOMING_CONNECTIONS, 0x00])
-                #response = bytearray([Packet.ID_CONNECTION_ATTEMPT_FAILED, 0x00])
-                #response = bytearray([Packet.ID_CONNECTION_BANNED, 0x00])
-            else:
-                re = Reliability(decrypted_data)
-                if(re.data[0] == Packet.ID_CONNECTION_REQUEST):
-                    response = bytearray([0xE3, 0x00, 0x00])
-
-    
-    if(len(response) > 0):
-        server.sendto(response,  addr)
-        LOG_MSG(" SEND ", addr, response)
-
-            
-#"\x1a\xf4\x10" <=> "\xa8\x1e\x1a9"
-#"\x1a\xab,"    <=> "\x8a\x1e\xf6\xf4"
-#newid=69
-#adr =  [int(el) for el in addr[0].split('.')]
-#response=[Packet.ID_CONNECTION_REQUEST_ACCEPTED, adr[0],adr[1],adr[2],adr[3], 0xD2,0x04,newid,45,31,48,95]
+    (data, addr) = s.recvfrom(128*1024)
+    query = SampQuery(data)
+    log.debug("@%s\t%r\t%s" % (addr, data, query.__str__()))
+    if(query.type=='i'):
+        d = Server.GetServerInfoPacket(data)
+        s.sendto(d,  addr)
+        print("  >>> Sending ", d)
+    elif(query.type=='r'):
+        d = Server.GetServerRulesPacket(data)
+        s.sendto(d,  addr)
+        print("  >>> Sending ", d)
+    elif(query.type=='c'):
+        d = Server.GetBasicPlayersPacket(data)
+        s.sendto(d,  addr)
+        print("  >>> Sending ", d)
+    elif(query.type=='d'):
+        d = Server.GetDetailedPlayersPacket(data)
+        s.sendto(d,  addr)
+        print("  >>> Sending ", d)
+    elif(query.type=='p'):
+        d = data
+        s.sendto(d,  addr)
+        print("  >>> Sending ", d)

@@ -1,7 +1,7 @@
 {
 
     "announce": 1,
-    "port": 7776,
+    "port": 1234,
     "hostname": "Darkside Roleplay(2XP)",
     "password": "",
     "maxplayers": 100,
